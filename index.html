@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生單一入口 - 學生陳情與分級安全審查系統</title>
+    <!-- Tailwind CSS 載入 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js 載入 -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        /* 滾動條美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans flex flex-col text-slate-800 min-h-screen antialiased">
+
+    <!-- 全域資料與狀態控制中心 -->
+    <div x-data="systemAppState()" x-init="initSystem()" x-cloak class="flex-grow flex flex-col relative">
+
+        <!-- ========================================== -->
+        <!-- ============ 全域滑入式 Toast ============ -->
+        <!-- ========================================== -->
+        <div class="fixed top-6 right-6 z-50 space-y-3 pointer-events-none">
+            <template x-if="toast">
+                <div class="shadow-2xl flex items-center p-4 rounded-2xl border max-w-sm transition-all duration-300 bg-white border-l-4 pointer-events-auto"
+                     :class="{
+                        'border-l-indigo-600': toast.type === 'success',
+                        'border-l-rose-600': toast.type === 'error',
+                        'border-l-amber-500': toast.type === 'warning'
+                     }"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-x-12"
+                     x-transition:enter-end="opacity-100 translate-x-0"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-x-0"
+                     x-transition:leave-end="opacity-0 translate-x-12">
+                    <div class="mr-3 shrink-0">
+                        <span x-show="toast.type === 'success'" class="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600 font-bold">✓</span>
+                        <span x-show="toast.type === 'error'" class="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 font-bold">✕</span>
+                        <span x-show="toast.type === 'warning'" class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-600 font-bold">⚠</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-900">系統提示</p>
+                        <p class="text-xs text-slate-500 mt-0.5" x-text="toast.message"></p>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ====== 1. SSO 學生單一登入門戶 (未登入) ====== -->
+        <!-- ========================================== -->
+        <div x-show="!isLoggedIn" class="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16 bg-slate-900 relative overflow-hidden">
+            
+            <!-- 背景發光裝飾 -->
+            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full filter blur-3xl -z-10 animate-pulse"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full filter blur-3xl -z-10"></div>
+
+            <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch z-10">
+                
+                <!-- SSO 左側：公告板 -->
+                <div class="lg:col-span-7 text-white flex flex-col justify-between space-y-6 pr-0 lg:pr-4">
+                    <div class="space-y-6">
+                        <div class="flex items-center space-x-3">
+                          <div class="bg-indigo-600 p-2.5 rounded-2xl">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 009 11a13.918 13.918 0 00-6.109-11.558M12 11c0 3.517 1.009 6.799 2.753 9.571m3.44-2.04l-.054-.09A13.916 13.916 0 0115 11a13.918 13.918 0 016.109-11.558M12 11V3m0 8l-2.04-2m2.04 2l2.04-2"></path>
+                            </svg>
+                          </div>
+                          <div>
+                            <h1 class="text-xl font-bold tracking-widest text-slate-200">學生單一登入</h1>
+                            <p class="text-xs text-indigo-400 font-bold -mt-0.5">Student Single Sign-On (SSO)</p>
+                          </div>
+                        </div>
+
+                        <div class="space-y-4">
+                          <h2 class="text-3xl font-extrabold tracking-tight leading-tight">
+                            整合式校園民主橋樑，<br>分級審查，資訊公開透明！
+                          </h2>
+                          <p class="text-slate-400 text-sm leading-relaxed max-w-lg font-normal">
+                            歡迎使用單一認證服務。此系統已完成跨系統整合，本校教職員與全體學員均可憑學號/工號帳戶無縫訪問本陳情與分級稽核核心。
+                          </p>
+                        </div>
+
+                        <!-- SSO 即時公開公告板 -->
+                        <div class="bg-slate-800/80 rounded-2xl p-5 border border-slate-700 max-w-lg shadow-inner">
+                          <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center space-x-1.5">
+                            <span>📢</span>
+                            <span>系統門戶公告 / 重要校園最新消息</span>
+                          </h3>
+                          <div class="space-y-3 divide-y divide-slate-700/50">
+                            <template x-for="ann in sortedAnnouncements().slice(0, 2)" :key="ann.id">
+                              <div class="pt-2 first:pt-0">
+                                <div class="flex items-center space-x-2 text-[11px] text-slate-400">
+                                  <span class="font-mono text-indigo-300" x-text="ann.date"></span>
+                                  <span>•</span>
+                                  <span class="bg-slate-700 text-slate-200 px-2 py-0.5 rounded text-[9px] font-bold" x-text="ann.department"></span>
+                                  <template x-if="ann.isPinned">
+                                      <span class="text-[10px] text-rose-400 font-bold">置頂</span>
+                                  </template>
+                                </div>
+                                <h4 class="text-xs font-bold text-slate-200 mt-1" x-text="ann.title"></h4>
+                              </div>
+                            </template>
+                          </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-2 text-xs text-slate-300 border-t border-slate-800 max-w-lg">
+                        <div class="flex items-center space-x-2">
+                          <span class="text-indigo-400">🛡️</span>
+                          <span>SSO 帳號一鍵稽核驗證</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                          <span class="text-indigo-400">💾</span>
+                          <span>全案 Excel 匯出保存支持</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SSO 右側：認證登入/重設密碼卡片 -->
+                <div class="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 flex flex-col justify-between min-h-[460px]">
+                    <div>
+                        <!-- 學生 / 行政人員 切換頁籤 (重設密碼時隱藏) -->
+                        <div x-show="!isResettingPassword" class="flex rounded-xl bg-slate-100 p-1 mb-6">
+                            <button type="button" @click="loginTab = 'student'; loginId = ''"
+                                    class="flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all"
+                                    :class="loginTab === 'student' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'">
+                                👨‍🎓 學生學號登入
+                            </button>
+                            <button type="button" @click="loginTab = 'admin'; loginId = ''"
+                                    class="flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all"
+                                    :class="loginTab === 'admin' ? 'bg-emerald-600 text-white shadow' : 'text-slate-500 hover:text-slate-800'">
+                                🏫 行政管理登入
+                            </button>
+                        </div>
+
+                        <!-- A. 重設密碼卡片 -->
+                        <div x-show="isResettingPassword" class="space-y-4">
+                            <div class="mb-4">
+                                <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-1.5">
+                                    <span>🔑</span>
+                                    <span x-text="loginTab === 'student' ? '學生密碼重設' : '行政管理密碼重設'"></span>
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-1 leading-relaxed" 
+                                   x-text="resetStep === 1 ? '請輸入登記學號/工號以及預留電子信箱以發送驗證碼' : '驗證信已發送！請輸入驗證碼並設定您的登入新密碼'"></p>
+                            </div>
+
+                            <!-- 步驟 1: 輸入資訊 -->
+                            <form x-show="resetStep === 1" @submit.prevent="handleSendResetCode" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5" x-text="loginTab === 'student' ? '認證學號' : '認證工號'"></label>
+                                    <input type="text" required :placeholder="loginTab === 'student' ? '例：S1120401' : '例：A99001'" x-model="resetId"
+                                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">登記電子信箱</label>
+                                    <input type="email" required placeholder="例：s1120401@university.edu.tw" x-model="resetEmail"
+                                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <button type="submit" class="w-full py-2.5 rounded-xl font-bold text-sm text-white shadow-md transition-all"
+                                        :class="loginTab === 'student' ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-emerald-600 hover:bg-emerald-500'">
+                                    發送驗證碼 ➔
+                                </button>
+                                <div class="text-center pt-2">
+                                    <button type="button" @click="isResettingPassword = false; resetStep = 1" class="text-xs text-indigo-600 hover:text-indigo-500 font-bold transition-all">
+                                        返回普通登入介面
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- 步驟 2: 驗證碼與設定 -->
+                            <form x-show="resetStep === 2" @submit.prevent="handleVerifyAndReset" class="space-y-4">
+                                <div class="bg-amber-50 border border-amber-100 p-3 rounded-xl text-[11px] text-amber-800 leading-normal font-sans">
+                                    💡 <strong>SSO 安全提示：</strong>驗證信已派送至信箱，請在下方輸入測試用萬能驗證碼 <strong>1234</strong> 即可建立新密碼。
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">認證驗證碼</label>
+                                    <input type="text" required maxLength="6" placeholder="請輸入驗證碼 (1234)" x-model="resetCode"
+                                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none text-center tracking-widest font-bold focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">設定登入新密碼</label>
+                                    <input type="password" required placeholder="請輸入欲設定的新密碼" x-model="resetNewPassword"
+                                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <button type="submit" class="w-full py-2.5 rounded-xl font-bold text-sm text-white shadow-md transition-all"
+                                        :class="loginTab === 'student' ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-emerald-600 hover:bg-emerald-500'">
+                                    確認並變更密碼 ➔
+                                </button>
+                                <div class="flex items-center justify-between px-1 pt-2">
+                                  <button type="button" @click="resetStep = 1" class="text-xs text-slate-400 hover:text-slate-600 font-semibold">← 上一步</button>
+                                  <button type="button" @click="isResettingPassword = false; resetStep = 1" class="text-xs text-indigo-600 hover:text-indigo-500 font-bold transition-all">返回登入</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- B. 普通登入卡片 (智慧偵測) -->
+                        <div x-show="!isResettingPassword" class="space-y-4">
+                            <div class="mb-4">
+                                <h3 class="text-lg font-bold text-slate-900 font-sans" x-text="loginTab === 'student' ? 'SSO 學生單一入口登入' : 'SSO 行政承辦端登入'"></h3>
+                                <p class="text-xs text-slate-400 mt-1 leading-relaxed font-normal">
+                                    請使用學校發配之校園單一登入帳密。若使用內部特定測試帳戶，可輸入專屬學號/工號立即啟用智慧免密登入。
+                                </p>
+                            </div>
+
+                            <form @submit.prevent="handleLoginSubmit" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5" x-text="loginTab === 'student' ? '學號' : '行政工號'"></label>
+                                    <input type="text" required :placeholder="loginTab === 'student' ? '例：S1120401' : '例：A99001'" 
+                                           :value="loginId" @input="handleIdInputChange($event.target.value)"
+                                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-900 placeholder-slate-400 font-mono">
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center justify-between mb-1.5">
+                                      <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">密碼</label>
+                                      <button type="button" @click="isResettingPassword = true; resetStep = 1; resetId = loginId" class="text-[11px] text-indigo-600 hover:text-indigo-500 font-bold">
+                                        忘記密碼 / 重設密碼？
+                                      </button>
+                                    </div>
+                                    <input type="password" required placeholder="••••••••" x-model="loginPassword"
+                                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+
+                                <button type="submit" class="w-full py-3 rounded-xl font-bold text-sm text-white shadow-md transition-all"
+                                        :class="loginTab === 'student' ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-emerald-600 hover:bg-emerald-500'">
+                                    安全登入 SSO ➔
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- SSO 底部備註 -->
+                    <div class="mt-8 pt-4 border-t border-slate-100 text-center font-normal">
+                        <span class="text-[10px] text-slate-400 leading-relaxed block font-sans">
+                          安全警示：校園整合帳戶（如 S1120401, A99001 等）已全面連線 Single Sign-On 自動服務，填畢帳號將立即登入。
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ====== 2. SSO 學生/管理平台 (已登入) ====== -->
+        <!-- ========================================== -->
+        <div x-show="isLoggedIn" class="flex-grow flex flex-col">
+            
+            <!-- SSO 頂部導航欄 -->
+            <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div class="flex items-center justify-between h-16">
+                    
+                    <!-- LOGO -->
+                    <div class="flex items-center space-x-3">
+                      <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 009 11a13.918 13.918 0 00-6.109-11.558M12 11c0 3.517 1.009 6.799 2.753 9.571m3.44-2.04l-.054-.09A13.916 13.916 0 0115 11a13.918 13.918 0 016.109-11.558M12 11V3m0 8l-2.04-2m2.04 2l2.04-2"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <span class="font-bold text-lg tracking-wider block">學生單一登入</span>
+                        <span class="text-xs text-indigo-300 block -mt-1 font-medium">校園意見與安全分級審查系統</span>
+                      </div>
+                    </div>
+
+                    <!-- 用戶資訊與安全登出 -->
+                    <div class="flex items-center space-x-4">
+                      <div class="flex items-center space-x-2 text-xs border-r border-slate-700 pr-4">
+                        <div class="text-right">
+                          <p class="font-semibold text-slate-200" x-text="role === 'student' ? studentUser?.name : adminUser?.name"></p>
+                          <p class="scale-90 origin-right font-medium" :class="role === 'student' ? 'text-slate-400' : 'text-emerald-400'"
+                             x-text="role === 'student' ? `學號：${studentUser?.id}` : `工號：${adminUser?.id} | [${adminUser?.permissionLabel}]`"></p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold border"
+                             :class="{
+                                'bg-indigo-950 text-indigo-300 border-indigo-500': role === 'student',
+                                'bg-rose-950 text-rose-300 border-rose-500': role === 'admin' && adminUser?.roleType === 'super',
+                                'bg-emerald-950 text-emerald-300 border-emerald-500': role === 'admin' && adminUser?.roleType !== 'super'
+                             }"
+                             x-text="role === 'student' ? 'ST' : (adminUser?.roleType === 'super' ? 'SU' : 'AD')">
+                        </div>
+                      </div>
+
+                      <button @click="handleLogout" class="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 hover:text-rose-300 transition-all border border-rose-500/20">
+                        安全登出 ↩
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+            </header>
+
+            <!-- SSO 主體區塊 -->
+            <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+                
+                <!-- ============================================== -->
+                <!-- ================== 學生端視角 ================== -->
+                <!-- ============================================== -->
+                <div x-show="role === 'student' && studentUser" class="space-y-6 animate-fade-in">
+                    
+                    <!-- 學生最新公告區塊 (手風琴 Accordion) -->
+                    <div class="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5">
+                      <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                        <h3 class="text-sm font-extrabold text-slate-800 flex items-center space-x-1.5 font-sans">
+                          <span class="text-base">📢</span>
+                          <span>校園重要最新公告與消息 (<span x-text="announcements.length"></span> 則)</span>
+                        </h3>
+                        <span class="text-[11px] text-slate-400 font-normal">點選標題可展開/收摺公告詳細內文</span>
+                      </div>
+
+                      <div class="space-y-2">
+                        <template x-for="ann in sortedAnnouncements()" :key="ann.id">
+                            <div class="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden transition-all duration-300">
+                              <div @click="expandedAnnId = (expandedAnnId === ann.id ? null : ann.id)"
+                                   class="p-3.5 flex items-center justify-between cursor-pointer hover:bg-indigo-50/30 transition-all text-sm font-bold">
+                                <div class="flex items-center space-x-3 truncate">
+                                  <span x-show="ann.isPinned" class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded font-extrabold whitespace-nowrap">置頂</span>
+                                  <span x-show="!ann.isPinned" class="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap">消息</span>
+                                  <span class="text-slate-800 truncate font-sans" x-text="ann.title"></span>
+                                </div>
+                                <div class="flex items-center space-x-3 text-xs text-slate-400 font-normal shrink-0 ml-4">
+                                  <span class="bg-white px-2 py-0.5 rounded-md border border-slate-150 text-[10px] font-bold text-slate-500" x-text="ann.department"></span>
+                                  <span class="font-mono text-[11px]" x-text="ann.date"></span>
+                                  <span x-text="expandedAnnId === ann.id ? '▲' : '▼'"></span>
+                                </div>
+                              </div>
+                              <div x-show="expandedAnnId === ann.id" class="px-5 pb-5 pt-2 text-slate-600 text-xs leading-relaxed border-t border-slate-100 whitespace-pre-wrap font-normal font-sans" x-text="ann.content"></div>
+                            </div>
+                        </template>
+                      </div>
+                    </div>
+
+                    <!-- 學生歡迎橫幅 -->
+                    <div class="bg-gradient-to-r from-indigo-900 to-slate-800 rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+                      <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-12 translate-x-12">
+                        <svg class="w-80 h-80" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                        </svg>
+                      </div>
+                      <div class="relative z-10">
+                        <span class="bg-indigo-500 bg-opacity-30 text-indigo-200 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider font-mono">
+                          校園 SSO 代表帳號：<span x-text="studentUser.name"></span> (<span x-text="studentUser.id"></span>)
+                        </span>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold mt-3 tracking-tight">
+                          讓你的聲音，推動校園更好 ✨
+                        </h1>
+                        <p class="text-slate-300 mt-2 text-sm sm:text-base max-w-2xl leading-relaxed font-normal opacity-90 font-sans">
+                          歡迎使用學生單一登入陳情系統。您可以提出對學校教務、設施、餐飲或學生福利的建議。發起提案，邀請同學共同聯署，校方相關單位將於法定時間內研擬並公開回覆。
+                        </p>
+
+                        <!-- 學生操作切換 -->
+                        <div class="flex flex-wrap gap-2 mt-6">
+                          <button @click="currentTab = 'all'"
+                            class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center space-x-2"
+                            :class="currentTab === 'all' ? 'bg-white text-indigo-950 shadow-md' : 'bg-white/10 hover:bg-white/20 text-white'">
+                            <span>🔍 瀏覽全校陳情</span>
+                          </button>
+                          <button @click="currentTab = 'my'"
+                            class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center space-x-2"
+                            :class="currentTab === 'my' ? 'bg-white text-indigo-950 shadow-md' : 'bg-white/10 hover:bg-white/20 text-white'">
+                            <span>📂 我的提案與聯署</span>
+                          </button>
+                          <button @click="currentTab = 'new'"
+                            class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center space-x-2"
+                            :class="currentTab === 'new' ? 'bg-yellow-500 text-slate-950 shadow-md hover:bg-yellow-400 font-bold' : 'bg-emerald-600 hover:bg-emerald-500 text-white'">
+                            <span>✍️ 發起新陳情</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 學生：陳情列表頁面 -->
+                    <div x-show="currentTab === 'all' || currentTab === 'my'" class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <!-- 側邊篩選 -->
+                        <div class="lg:col-span-1 space-y-6">
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">關鍵字搜尋</label>
+                                <div class="relative">
+                                  <input type="text" placeholder="搜尋標題、內容..." x-model="searchQuery"
+                                         class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-900 font-sans">
+                                  <button x-show="searchQuery" @click="searchQuery = ''" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-sm">✕</button>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">陳情類別</label>
+                                <div class="space-y-1">
+                                    <button @click="selectedCategory = '全部'"
+                                            class="w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between"
+                                            :class="selectedCategory === '全部' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-600 hover:bg-slate-50'">
+                                        <span>全部類別</span>
+                                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal" x-text="petitions.length"></span>
+                                    </button>
+                                    <template x-for="cat in CATEGORIES" :key="cat">
+                                        <button @click="selectedCategory = cat"
+                                                class="w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between"
+                                                :class="selectedCategory === cat ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-600 hover:bg-slate-50'">
+                                            <span x-text="cat"></span>
+                                            <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal" x-text="petitions.filter(p => p.category === cat).length"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">處理狀態</label>
+                                <div class="space-y-1">
+                                    <button @click="selectedStatus = '全部'"
+                                            class="w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between"
+                                            :class="selectedStatus === '全部' ? 'bg-slate-100 text-slate-800 font-bold' : 'text-slate-600 hover:bg-slate-50'">
+                                        <span>全部狀態</span>
+                                        <span class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-normal" x-text="petitions.length"></span>
+                                    </button>
+                                    <template x-for="stat in STATUSES" :key="stat">
+                                        <button @click="selectedStatus = stat"
+                                                class="w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between"
+                                                :class="{
+                                                    'bg-amber-50 text-amber-700 font-bold': selectedStatus === stat && stat === '待處理',
+                                                    'bg-blue-50 text-blue-700 font-bold': selectedStatus === stat && stat === '審核中',
+                                                    'bg-emerald-50 text-emerald-700 font-bold': selectedStatus === stat && stat === '已解決',
+                                                    'bg-rose-50 text-rose-700 font-bold': selectedStatus === stat && stat === '不予受理',
+                                                    'text-slate-600 hover:bg-slate-50': selectedStatus !== stat
+                                                }">
+                                            <span x-text="stat"></span>
+                                            <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal" x-text="petitions.filter(p => p.status === stat).length"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 案件內容區 -->
+                        <div class="lg:col-span-3 space-y-4">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div class="flex items-center space-x-2 text-sm text-slate-600 font-semibold font-sans">
+                                    <span>正在瀏覽：</span>
+                                    <span class="font-semibold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-md" x-text="currentTab === 'all' ? '全校陳情' : '我的提案'"></span>
+                                    <span x-show="selectedCategory !== '全部'" class="font-semibold bg-slate-100 text-slate-800 px-2.5 py-0.5 rounded-md" x-text="'類別: ' + selectedCategory"></span>
+                                    <span x-show="selectedStatus !== '全部'" class="font-semibold bg-slate-100 text-slate-800 px-2.5 py-0.5 rounded-md" x-text="'狀態: ' + selectedStatus"></span>
+                                </div>
+                                <div class="flex items-center space-x-3 self-end sm:self-auto font-sans">
+                                  <span class="text-xs font-bold text-slate-400">共 <span x-text="getFilteredPetitions().length"></span> 筆</span>
+                                  <button @click="handleExportPetitions(getFilteredPetitions(), true)"
+                                          class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                                          title="將目前搜尋出的案件匯出為 Excel 檔案">
+                                    <span>💾 匯出本頁 Excel</span>
+                                  </button>
+                                </div>
+                            </div>
+
+                            <!-- 案件清單渲染 & 空白狀態引導 -->
+                            <div class="space-y-4">
+                                <template x-if="getFilteredPetitions().length > 0">
+                                    <div>
+                                        <template x-for="item in getFilteredPetitions()" :key="item.id">
+                                            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 p-6 flex flex-col md:flex-row md:items-start justify-between gap-4 animate-fade-in mb-4">
+                                              <div class="space-y-3 flex-grow max-w-4xl font-sans">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                  <span class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded" x-text="'#' + item.id"></span>
+                                                  <span class="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full" x-text="item.category"></span>
+                                                  <span x-show="item.coSigners.length >= 15" class="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded flex items-center font-sans">🔥 熱門聯署</span>
+                                                  <span class="text-xs font-bold px-2.5 py-0.5 rounded-full ml-auto md:ml-0"
+                                                        :class="{
+                                                            'bg-amber-100 text-amber-800': item.status === '待處理',
+                                                            'bg-blue-100 text-blue-800': item.status === '審核中',
+                                                            'bg-emerald-100 text-emerald-800': item.status === '已解決',
+                                                            'bg-slate-100 text-slate-800': item.status === '不予受理'
+                                                        }"
+                                                        x-text="'● ' + item.status"></span>
+                                                </div>
+
+                                                <h3 @click="openPetitionDetail(item)" class="text-lg font-bold text-slate-900 hover:text-indigo-600 cursor-pointer transition-all leading-snug" x-text="item.title"></h3>
+                                                <p class="text-sm text-slate-600 line-clamp-2 leading-relaxed font-normal" x-text="item.content"></p>
+
+                                                <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-400">
+                                                  <span>提案人：<strong class="text-slate-600" x-text="item.author + (item.studentId ? ` (${item.studentId})` : '')"></strong></span>
+                                                  <span>發佈日期：<span x-text="item.date"></span></span>
+                                                  <span class="flex items-center">👁 瀏覽 <span x-text="item.views"></span> 次</span>
+                                                  <span class="flex items-center text-indigo-600 font-semibold font-sans">✍ 聯署人數：<span x-text="item.coSigners.length"></span> 人</span>
+                                                </div>
+                                              </div>
+
+                                              <div class="flex md:flex-col items-stretch justify-end gap-2 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100 font-sans">
+                                                <button @click="openPetitionDetail(item)" class="flex-1 md:flex-none text-center px-4 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all">
+                                                  詳細案情與回覆
+                                                </button>
+                                                <button x-show="item.status !== '已解決' && item.status !== '不予受理'"
+                                                        @click="handleCoSign(item.id)"
+                                                        :disabled="item.coSigners.includes(studentUser.id)"
+                                                        class="flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1"
+                                                        :class="item.coSigners.includes(studentUser.id) ? 'bg-slate-100 text-slate-400 cursor-not-allowed font-semibold' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'">
+                                                  <span x-text="item.coSigners.includes(studentUser.id) ? '✓ 已聯署支持' : '✍ 點我聯署支持'"></span>
+                                                </button>
+                                              </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <!-- 新增：高質感「空白狀態」UI (精細區分「無搜尋結果」與「我的提案無案件」) -->
+                                <template x-if="getFilteredPetitions().length === 0">
+                                    <div>
+                                        <!-- A. 我的提案真正空白 -->
+                                        <template x-if="currentTab === 'my' && petitions.filter(p => studentUser && (p.studentId === studentUser.id || p.author === studentUser.name)).length === 0">
+                                            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-12 text-center font-sans max-w-lg mx-auto animate-fade-in my-6">
+                                                <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                                                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800">您目前尚未建立過任何陳情案</h3>
+                                                <p class="text-slate-400 text-xs mt-2 leading-relaxed max-w-xs mx-auto">
+                                                    對校園的行政、教務、餐廳、或設施環境有需要改進的想法嗎？現在就發起您第一份具有建設性的陳情吧！
+                                                </p>
+                                                <button @click="currentTab = 'new'" class="mt-6 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all font-sans">
+                                                    ✍️ 立即提出首份陳情案
+                                                </button>
+                                            </div>
+                                        </template>
+
+                                        <!-- B. 搜尋篩選無結果 -->
+                                        <template x-if="!(currentTab === 'my' && petitions.filter(p => studentUser && (p.studentId === studentUser.id || p.author === studentUser.name)).length === 0)">
+                                            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-12 text-center font-sans max-w-lg mx-auto animate-fade-in my-6">
+                                                <div class="w-20 h-20 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                                                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                                    </svg>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-slate-800">未找到符合條件的陳情案</h3>
+                                                <p class="text-slate-400 text-xs mt-2 leading-relaxed max-w-xs mx-auto">
+                                                    在當前篩選器與關鍵字組合下沒有匹配的資料。請嘗試清理篩選條件、重新搜尋，或是更換關鍵字。
+                                                </p>
+                                                <button @click="resetFilters()" class="mt-6 px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all font-sans">
+                                                    🔄 重置所有篩選條件
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 學生：發起新提案 -->
+                    <div x-show="currentTab === 'new'" class="max-w-3xl mx-auto bg-white rounded-3xl shadow-md border border-slate-100 overflow-hidden">
+                        <div class="bg-gradient-to-r from-indigo-800 to-indigo-950 p-6 text-white font-sans">
+                          <h2 class="text-xl font-bold">發起全新陳情提案</h2>
+                          <p class="text-xs text-indigo-200 mt-1 font-normal">
+                            提案將公布於校園平台，獲得15人以上聯署將大幅提升校方辦理優先級。
+                          </p>
+                        </div>
+
+                        <form @submit.prevent="handleSubmitPetition" class="p-6 sm:p-8 space-y-6 font-normal">
+                          <div class="bg-slate-50 p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-600 border border-slate-100">
+                            <div>
+                              <p class="text-slate-400 font-bold">當前提案帳號身分</p>
+                              <p class="font-semibold text-slate-800 mt-0.5 font-sans" x-text="`${studentUser.name} (${studentUser.id})`"></p>
+                            </div>
+                            <div>
+                              <p class="text-slate-400 font-bold font-sans">系統自動紀錄電子郵件</p>
+                              <p class="font-semibold text-slate-800 mt-0.5" x-text="studentUser.email"></p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2 font-sans">陳情提案主題 <span class="text-rose-500">*</span></label>
+                            <input type="text" required placeholder="請用簡明扼要的一句話說明核心訴求（例：請於學餐增設素食窗口）" x-model="newTitle"
+                              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-900">
+                          </div>
+
+                          <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2 font-sans">分類歸屬 <span class="text-rose-500">*</span></label>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              <template x-for="cat in CATEGORIES" :key="cat">
+                                <button type="button" @click="newCategory = cat"
+                                  class="px-4 py-2.5 rounded-xl text-xs font-bold border transition-all"
+                                  :class="newCategory === cat ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm font-bold' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                                  x-text="cat">
+                                </button>
+                              </template>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2 font-sans">陳情訴求細節與原因說明 <span class="text-rose-500">*</span></label>
+                            <textarea required rows="6" placeholder="請詳細敘述您發現的校園問題、發生的具體時間地點、受影響範圍，以及您希望學校採取的改善措施..." x-model="newContent"
+                              class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all leading-relaxed font-normal text-slate-900"></textarea>
+                          </div>
+
+                          <div class="p-4 bg-indigo-50/50 rounded-xl flex items-start space-x-3">
+                            <input type="checkbox" id="anonymousCheck" x-model="newIsAnonymous" class="h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                            <div class="text-xs">
+                              <label htmlFor="anonymousCheck" class="font-bold text-slate-800 cursor-pointer block font-sans">我要匿名發表此案</label>
+                              <p class="text-slate-500 mt-1 leading-relaxed">
+                                勾選後，前台系統僅會顯示為「匿名同學」，保障個人隱私。但系統後台仍會紀錄提案學號，以防止惡意中傷，學校承辦人員將同樣對外嚴格保密。
+                              </p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1 font-sans">備用聯絡信箱 / 電話</label>
+                            <p class="text-xs text-slate-400 mb-2">僅用於承辦人需要補充案情細節時聯繫，不予公開。</p>
+                            <input type="text" placeholder="請輸入常用 Email 或電話" x-model="newContact"
+                              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-900">
+                          </div>
+
+                          <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
+                            <button type="button" @click="currentTab = 'all'" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-all font-sans">取消返回</button>
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md transition-all font-sans">確定遞交陳情</button>
+                          </div>
+                        </form>
+                    </div>
+
+                </div>
+
+                <!-- ============================================== -->
+                <!-- ================== 行政管理端 ================== -->
+                <!-- ============================================== -->
+                <div x-show="role === 'admin' && adminUser" class="space-y-6 animate-fade-in">
+                    
+                    <!-- 統計資訊 -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                        <div class="p-3.5 bg-slate-100 text-slate-700 rounded-xl">📄</div>
+                        <div>
+                          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">陳情案總量</p>
+                          <p class="text-2xl font-bold text-slate-900 mt-1"><span x-text="petitions.length"></span> 筆</p>
+                        </div>
+                      </div>
+                      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                        <div class="p-3.5 bg-amber-50 text-amber-600 rounded-xl">⏳</div>
+                        <div>
+                          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">待處理 / 審核中</p>
+                          <p class="text-2xl font-bold text-slate-900 mt-1"><span x-text="petitions.filter(p => p.status === '待處理' || p.status === '審核中').length"></span> 筆</p>
+                        </div>
+                      </div>
+                      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                        <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl">✓</div>
+                        <div>
+                          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">已解決案</p>
+                          <p class="text-2xl font-bold text-slate-900 mt-1">
+                            <span x-text="petitions.filter(p => p.status === '已解決').length"></span> 筆
+                            <span class="text-xs text-slate-400 font-normal ml-2" x-text="`(${Math.round((petitions.filter(p => p.status === '已解決').length / petitions.length) * 100)}%)`"></span>
+                          </p>
+                        </div>
+                      </div>
+                      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                        <div class="p-3.5 bg-indigo-50 text-indigo-600 rounded-xl">🛡️</div>
+                        <div>
+                          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">管轄權限範圍</p>
+                          <p class="text-sm font-bold text-indigo-900 mt-1.5 truncate max-w-[150px]" x-text="adminUser.roleType === 'super' ? '校級全功能開放' : adminUser.allowedCategories.join(', ')"></p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 頁籤導航 -->
+                    <div class="flex border-b border-slate-200 mb-6 overflow-x-auto">
+                      <button @click="currentTab = 'list'"
+                              class="pb-3 px-6 text-sm font-bold transition-all border-b-2 whitespace-nowrap"
+                              :class="currentTab === 'list' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'">
+                        📊 案件審查與處理
+                      </button>
+                      <button @click="currentTab = 'anns'"
+                              class="pb-3 px-6 text-sm font-bold transition-all border-b-2 whitespace-nowrap"
+                              :class="currentTab === 'anns' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-800'">
+                        📢 系統公告消息管理
+                      </button>
+                      <button @click="if (adminUser.roleType !== 'super') { showToast('權限受阻！僅系統最高管理員能查閱系統安全稽核日誌。', 'error'); } else { currentTab = 'logs'; }"
+                              class="pb-3 px-6 text-sm font-bold transition-all border-b-2 flex items-center space-x-1.5 whitespace-nowrap"
+                              :class="[
+                                adminUser.roleType !== 'super' ? 'opacity-50 cursor-not-allowed' : '',
+                                currentTab === 'logs' ? 'border-rose-600 text-rose-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+                              ]">
+                        <span>🛡️ 系統安全稽核日誌</span>
+                        <template x-if="adminUser.roleType !== 'super'">
+                          <span class="text-[10px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded font-normal font-sans">密</span>
+                        </template>
+                      </button>
+                    </div>
+
+                    <!-- 頁籤一：陳情審查 -->
+                    <div x-show="currentTab === 'list'" class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in">
+                        <div class="p-6 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800">
+                          <div>
+                            <h2 class="text-xl font-bold font-sans">校方陳情與提案審查中心</h2>
+                            <p class="text-xs text-slate-400 mt-1 font-normal font-sans" x-text="`您是以行政主管 ${adminUser.name} (${adminUser.permissionLabel}) 身份登錄。`"></p>
+                          </div>
+                          <div class="flex flex-wrap items-center gap-2">
+                            <button @click="handleExportPetitions(petitions, false)"
+                                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1.5 font-sans">
+                              <span>💾 匯出陳情總表 Excel</span>
+                            </button>
+                            <span class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-mono">SSO 認證通過</span>
+                          </div>
+                        </div>
+
+                        <!-- 篩選列 -->
+                        <div class="p-6 bg-slate-50 border-b border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
+                          <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">案號或關鍵字搜尋</label>
+                            <input type="text" placeholder="搜尋標題、內容或案號..." x-model="searchQuery"
+                                   class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-medium text-slate-950">
+                          </div>
+                          <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">依類別</label>
+                            <select x-model="selectedCategory" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 font-bold">
+                              <option value="全部">全部類別</option>
+                              <template x-for="cat in CATEGORIES" :key="cat">
+                                  <option :value="cat" x-text="cat"></option>
+                              </template>
+                            </select>
+                          </div>
+                          <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">依狀態</label>
+                            <select x-model="selectedStatus" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 font-bold">
+                              <option value="全部">全部狀態</option>
+                              <template x-for="stat in STATUSES" :key="stat">
+                                  <option :value="stat" x-text="stat"></option>
+                              </template>
+                            </select>
+                          </div>
+                        </div>
+
+                        <!-- 表格 -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                              <thead>
+                                <tr class="bg-slate-50 text-slate-400 uppercase text-xs font-bold border-b border-slate-100 font-sans">
+                                  <th class="py-4 px-6">案號</th>
+                                  <th class="py-4 px-6">陳情類別</th>
+                                  <th class="py-4 px-6">提案標題</th>
+                                  <th class="py-4 px-6 text-center">聯署支持</th>
+                                  <th class="py-4 px-6 text-center">權限判定</th>
+                                  <th class="py-4 px-6">目前進度</th>
+                                  <th class="py-4 px-6 text-right">操作</th>
+                                </tr>
+                              </thead>
+                              <tbody class="divide-y divide-slate-100 text-sm font-medium">
+                                <template x-for="item in getFilteredPetitions()" :key="item.id">
+                                    <tr class="hover:bg-slate-50/50 transition-all font-sans">
+                                      <td class="py-4 px-6 font-mono text-xs text-slate-400" x-text="item.id"></td>
+                                      <td class="py-4 px-6">
+                                        <span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold" x-text="item.category"></span>
+                                      </td>
+                                      <td class="py-4 px-6 max-w-md">
+                                        <div class="font-bold text-slate-900 truncate" x-text="item.title"></div>
+                                        <div class="text-xs text-slate-400 truncate mt-0.5 font-normal" x-text="`提案人: ${item.author} (${item.studentId || '無資訊'}) | ${item.content.slice(0, 40)}...`"></div>
+                                      </td>
+                                      <td class="py-4 px-6 text-center">
+                                        <span class="px-2 py-1 rounded text-xs font-bold" :class="item.coSigners.length >= 15 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'" x-text="item.coSigners.length + ' 人'"></span>
+                                      </td>
+                                      <td class="py-4 px-6 text-center whitespace-nowrap">
+                                        <span x-show="canManagePetition(adminUser, item)" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[11px] font-bold">🟢 可辦理</span>
+                                        <span x-show="!canManagePetition(adminUser, item)" class="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded text-[11px] font-bold">🔒 跨部唯讀</span>
+                                      </td>
+                                      <td class="py-4 px-6 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold animate-fade-in"
+                                              :class="{
+                                                  'bg-amber-100 text-amber-800': item.status === '待處理',
+                                                  'bg-blue-100 text-blue-800': item.status === '審核中',
+                                                  'bg-emerald-100 text-emerald-800': item.status === '已解決',
+                                                  'bg-slate-100 text-slate-800': item.status === '不予受理'
+                                              }"
+                                              x-text="'● ' + item.status"></span>
+                                      </td>
+                                      <td class="py-4 px-6 text-right whitespace-nowrap">
+                                        <button @click="openPetitionDetail(item)"
+                                                class="px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all"
+                                                :class="canManagePetition(adminUser, item) ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold' : 'bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold'"
+                                                x-text="canManagePetition(adminUser, item) ? '審查與答覆' : '檢視陳情'"></button>
+                                      </td>
+                                    </tr>
+                                </template>
+                              </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 新增：管理端搜尋無資料空白頁 -->
+                        <template x-if="getFilteredPetitions().length === 0">
+                            <div class="py-16 text-center animate-fade-in font-sans">
+                                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-base font-bold text-slate-700">目前沒有符合篩選條件的學生陳情案</h4>
+                                <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+                                    建議您更換搜尋字詞或將「類別」與「進度狀態」篩選器調回全部。
+                                </p>
+                                <button @click="resetFilters()" class="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition-all font-sans">
+                                    🔄 重置篩選
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- 頁籤二：公告管理頁面 -->
+                    <div x-show="currentTab === 'anns'" class="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in font-sans">
+                        <!-- 發布公告表單 -->
+                        <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-150 p-6 shadow-sm h-fit">
+                          <h3 class="font-bold text-slate-800 text-sm mb-4 border-b border-slate-100 pb-2 flex items-center space-x-1">
+                            <span>✍️</span>
+                            <span>發布處室系統公告</span>
+                          </h3>
+
+                          <form @submit.prevent="handleCreateAnnouncement" class="space-y-4">
+                            <div>
+                              <p class="text-xs text-slate-400 font-bold">發布身份單位 (依管理員權限)</p>
+                              <p class="font-extrabold text-indigo-700 mt-1.5 bg-indigo-50 border border-indigo-100 p-3 rounded-xl text-xs flex items-center justify-between">
+                                  <span x-text="adminUser.permissionLabel"></span>
+                                  <span class="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded font-bold font-sans">Auto</span>
+                              </p>
+                            </div>
+
+                            <div>
+                              <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">公告主題 / 標題 <span class="text-rose-500">*</span></label>
+                              <input type="text" required placeholder="例：114學年度第二學期自習室使用新規" x-model="newAnnTitle"
+                                class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 font-bold">
+                            </div>
+
+                            <div>
+                              <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">公告詳細內文 <span class="text-rose-500">*</span></label>
+                              <textarea required rows="5" placeholder="請填寫此公告的具體細節、適用範圍、影響時程..." x-model="newAnnContent"
+                                class="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-sans leading-relaxed font-normal"></textarea>
+                            </div>
+
+                            <div class="p-3 bg-indigo-50/50 rounded-xl flex items-center space-x-3">
+                              <input type="checkbox" id="annPinCheck" x-model="newAnnIsPinned" class="h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                              <div class="text-xs">
+                                <label htmlFor="annPinCheck" class="font-bold text-slate-800 cursor-pointer block font-sans">將此條公告置頂展示</label>
+                                <p class="text-slate-400 mt-0.5">置頂的公告將在首頁的最上層醒目展示。</p>
+                              </div>
+                            </div>
+
+                            <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow transition-all font-sans">
+                              確認發布校園公告 ➔
+                            </button>
+                          </form>
+                        </div>
+
+                        <!-- 撤下與現行公告清單 -->
+                        <div class="lg:col-span-8 bg-white rounded-3xl border border-slate-150 shadow-sm overflow-hidden flex flex-col">
+                          <div class="p-6 bg-slate-950 text-white border-b border-slate-800 flex items-center justify-between">
+                            <div>
+                              <h3 class="font-bold text-lg text-indigo-400 flex items-center space-x-2 font-sans">
+                                <span>📢</span>
+                                <span>目前已發布公告管理 (<span x-text="announcements.length"></span> 筆)</span>
+                              </h3>
+                              <p class="text-xs text-slate-400 mt-1 font-normal font-sans">
+                                最高管理員可撤銷全校公告，各處室承辦人員僅可撤銷自己權限部門發布的公告消息。
+                              </p>
+                            </div>
+                            <button @click="handleExportAnnouncements" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow transition-all flex items-center space-x-1 font-sans">
+                              <span>💾 匯出公告 Excel</span>
+                            </button>
+                          </div>
+
+                          <div class="divide-y divide-slate-100">
+                            <template x-for="ann in sortedAnnouncements()" :key="ann.id">
+                                <div class="p-5 hover:bg-slate-50/50 transition-all flex items-start justify-between gap-4 animate-fade-in">
+                                  <div class="space-y-2 max-w-xl font-sans">
+                                    <div class="flex items-center space-x-2 text-xs">
+                                      <span class="font-mono text-slate-400" x-text="ann.id"></span>
+                                      <span>•</span>
+                                      <span class="font-mono text-slate-500 font-semibold" x-text="ann.date"></span>
+                                      <span>•</span>
+                                      <span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold" x-text="ann.department"></span>
+                                      <template x-if="ann.isPinned">
+                                        <span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded font-extrabold animate-pulse">置頂</span>
+                                      </template>
+                                    </div>
+                                    <h4 class="font-bold text-slate-900 text-sm leading-snug" x-text="ann.title"></h4>
+                                    <p class="text-slate-500 text-xs line-clamp-2 font-normal font-sans leading-relaxed" x-text="ann.content"></p>
+                                  </div>
+
+                                  <div class="shrink-0 flex flex-col items-end justify-between h-full min-h-[70px]">
+                                    <template x-if="adminUser.roleType === 'super' || adminUser.permissionLabel === ann.department">
+                                      <button @click="triggerCustomConfirm('下架安全確認', `確定要撤下並永久下架此公告：「${ann.title.slice(0, 15)}...」嗎？`, () => handleDeleteAnnouncement(ann.id))"
+                                              class="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded text-[10px] font-bold transition-all">
+                                        下架公告
+                                      </button>
+                                    </template>
+                                    <template x-if="!(adminUser.roleType === 'super' || adminUser.permissionLabel === ann.department)">
+                                      <span class="text-[10px] bg-slate-100 text-slate-400 px-2.5 py-1 rounded font-bold cursor-not-allowed" title="非管轄權益，不可越權下架">唯讀保護</span>
+                                    </template>
+                                  </div>
+                                </div>
+                            </template>
+                          </div>
+
+                          <!-- 新增：系統無公告空白頁 -->
+                          <template x-if="announcements.length === 0">
+                              <div class="p-16 text-center animate-fade-in font-sans text-slate-400">
+                                  <div class="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                                      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0V9a2 2 0 00-2-2H6a2 2 0 00-2 2v4"></path>
+                                      </svg>
+                                  </div>
+                                  <h4 class="text-base font-bold text-slate-700">目前平台中沒有已發布的校園公告</h4>
+                                  <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+                                      您可以使用左側的公告表單，即時撰寫發布一條宣導事項予全體在校生。
+                                  </p>
+                              </div>
+                          </template>
+                        </div>
+                    </div>
+
+                    <!-- 頁籤三：安全稽核日誌 (Super Admin Only) -->
+                    <div x-show="currentTab === 'logs' && adminUser?.roleType === 'super'" class="bg-white rounded-3xl border border-slate-150 overflow-hidden shadow-sm animate-fade-in font-sans">
+                        <div class="bg-slate-950 p-6 text-white border-b border-slate-800 flex items-center justify-between">
+                          <div>
+                            <h3 class="font-bold text-lg text-rose-400 flex items-center space-x-2 font-sans">
+                              <span>🛡️</span>
+                              <span>系統最高權限稽核日誌紀錄 (System Audit Logs)</span>
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-1 font-normal font-sans">
+                              此日誌具備防竄改機制，自動紀錄全體行政人員、最高管理員對陳情、系統公告增刪與 Excel 備份導出的任何變更。
+                            </p>
+                          </div>
+                          
+                          <div class="flex items-center space-x-2">
+                            <button @click="handleExportAuditLogs"
+                                    class="px-4 py-2 bg-rose-700 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1 font-sans">
+                              <span>💾 匯出稽核日誌 Excel</span>
+                            </button>
+                            <span class="bg-rose-500/10 text-rose-300 text-xs px-3 py-1 rounded border border-rose-500/20 font-mono">密級認證安全中</span>
+                          </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                          <table class="w-full text-left border-collapse">
+                            <thead>
+                              <tr class="bg-slate-50 text-slate-400 uppercase text-xs font-bold border-b border-slate-100 font-sans">
+                                <th class="py-4 px-6">日誌識別碼</th>
+                                <th class="py-4 px-6">日誌時間</th>
+                                <th class="py-4 px-6">動作人員</th>
+                                <th class="py-4 px-6">動作類別</th>
+                                <th class="py-4 px-6">詳細稽核描述</th>
+                              </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-sm font-mono text-slate-600 font-normal">
+                              <template x-for="log in auditLogs" :key="log.id">
+                                  <tr class="hover:bg-slate-50/50">
+                                    <td class="py-4 px-6 text-xs font-semibold text-slate-400" x-text="log.id"></td>
+                                    <td class="py-4 px-6 text-xs whitespace-nowrap text-slate-500" x-text="log.timestamp"></td>
+                                    <td class="py-4 px-6 text-xs font-bold text-slate-800 whitespace-nowrap" x-text="log.user"></td>
+                                    <td class="py-4 px-6">
+                                      <span class="px-2 py-0.5 rounded text-[11px] font-bold"
+                                            :class="{
+                                                'bg-rose-100 text-rose-800': log.action === '刪除提案',
+                                                'bg-blue-100 text-blue-800': log.action === '審查與答覆',
+                                                'bg-indigo-100 text-indigo-800 border border-indigo-200 animate-pulse': log.action === '自動登入',
+                                                'bg-emerald-100 text-emerald-800 border border-emerald-200': log.action === '資料匯出',
+                                                'bg-indigo-100 text-indigo-800': log.action === '公告管理',
+                                                'bg-amber-100 text-amber-800': log.action === '發布公告' || log.action === '刪除公告',
+                                                'bg-emerald-100 text-emerald-800': log.action === '登入系統',
+                                                'bg-slate-100 text-slate-800': log.action !== '刪除提案' && log.action !== '審查與答覆' && log.action !== '自動登入' && log.action !== '資料匯出' && log.action !== '公告管理' && log.action !== '發布公告' && log.action !== '刪除公告' && log.action !== '登入系統'
+                                            }"
+                                            x-text="log.action"></span>
+                                    </td>
+                                    <td class="py-4 px-6 text-xs text-slate-600 font-sans" x-text="log.details"></td>
+                                  </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </main>
+
+            <!-- 頁腳 -->
+            <footer class="bg-white border-t border-slate-200 mt-12 py-8 text-center text-xs text-slate-400">
+                <div class="max-w-7xl mx-auto px-4">
+                  <p>© 2026 國立大學 學生資訊與權益發展委員會 / 總務處 / 圖書資訊處 聯合維護</p>
+                  <p class="mt-2 text-slate-400 leading-relaxed max-w-2xl mx-auto scale-95 opacity-80 font-normal">
+                    本系統已全面啟動 Single Sign-On 學生單一認證。支援將陳情提案、系統最新公告、及系統稽核日誌離線備份保存為 Unicode CSV 報表。
+                  </p>
+                </div>
+            </footer>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ============ 3. 詳情檢視彈窗 ============ -->
+        <!-- ========================================== -->
+        <template x-if="detailPetition">
+            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto font-medium">
+              <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 transform transition-all">
+                
+                <!-- 彈窗頂部 -->
+                <div class="bg-gradient-to-r from-slate-900 to-indigo-950 p-6 text-white sticky top-0 z-10 flex items-center justify-between">
+                  <div>
+                    <span class="bg-indigo-500/30 text-indigo-200 text-xs px-2.5 py-0.5 rounded-full font-mono uppercase" x-text="'案號: ' + detailPetition.id"></span>
+                    <h2 class="text-lg font-bold mt-1 line-clamp-1" x-text="detailPetition.title"></h2>
+                  </div>
+                  <button @click="detailPetition = null; isAdminResponding = false" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 text-sm transition-all">✕</button>
+                </div>
+
+                <!-- 彈窗內容 -->
+                <div class="p-6 sm:p-8 space-y-6">
+                  <!-- 基本資訊 -->
+                  <div class="flex flex-wrap items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs">
+                    <div>
+                      <span class="text-slate-400 font-bold">分類：</span>
+                      <span class="font-bold text-indigo-700" x-text="detailPetition.category"></span>
+                    </div>
+                    <div class="h-4 w-px bg-slate-200"></div>
+                    <div>
+                      <span class="text-slate-400 font-bold">提案人：</span>
+                      <span class="font-bold text-slate-800" x-text="detailPetition.author + (detailPetition.studentId ? ` (${detailPetition.studentId})` : '')"></span>
+                    </div>
+                    <div class="h-4 w-px bg-slate-200"></div>
+                    <div>
+                      <span class="text-slate-400 font-bold">提出日期：</span>
+                      <span class="font-bold text-slate-800" x-text="detailPetition.date"></span>
+                    </div>
+                    <div class="h-4 w-px bg-slate-200"></div>
+                    <div class="text-indigo-600 font-bold ml-auto font-sans" x-text="`🔥 已獲 ${detailPetition.coSigners.length} 位同學聯署`"></div>
+                  </div>
+
+                  <!-- 訴求詳情 -->
+                  <div class="space-y-2">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider font-semibold">陳情內容細節</h3>
+                    <div class="p-5 bg-indigo-50/30 rounded-2xl border border-indigo-100/50 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-sans font-normal" x-text="detailPetition.content"></div>
+                  </div>
+
+                  <!-- 聯署支持名冊 -->
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider font-semibold">聯署支持名冊</h3>
+                      <span class="text-xs text-indigo-600 font-bold" x-text="`聯署熱度已達 ${(detailPetition.coSigners.length / 15 * 100).toFixed(0)}%`"></span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5 p-3 bg-slate-50 rounded-xl max-h-24 overflow-y-auto">
+                      <template x-for="(id, idx) in detailPetition.coSigners" :key="id">
+                          <span class="text-xs bg-white text-slate-600 px-2.5 py-1 rounded-md border border-slate-150 font-normal"
+                                x-text="id.startsWith('student_') ? `同學_${id.slice(-2)}` : `學生 (${id})`"></span>
+                      </template>
+                      <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md font-bold" x-text="`+ 共計 ${detailPetition.coSigners.length} 人`"></span>
+                    </div>
+                  </div>
+
+                  <!-- 官方回覆 -->
+                  <div class="space-y-2 border-t border-slate-100 pt-6">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">🏛 學校官方辦理與回覆</h3>
+                    <div x-show="detailPetition.officialResponse" class="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 space-y-3 animate-fade-in">
+                        <div class="flex items-center justify-between text-xs text-emerald-800 font-bold">
+                          <span x-text="`答覆單位：${detailPetition.officialResponse?.respondent}`"></span>
+                          <span x-text="`答覆時間：${detailPetition.officialResponse?.date}`"></span>
+                        </div>
+                        <p class="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-normal" x-text="detailPetition.officialResponse?.content"></p>
+                        <div class="text-xs text-emerald-600 flex items-center justify-end font-bold"><span>✓ 此回覆為本校最終決議或階段性公告</span></div>
+                    </div>
+                    <div x-show="!detailPetition.officialResponse" class="bg-slate-50 p-6 rounded-2xl border border-slate-150 text-center text-slate-500 text-sm font-normal">
+                         ⏳ 該案件目前尚未有官方答覆。相關行政主管單位正在研擬辦理中。
+                    </div>
+                  </div>
+
+                  <!-- 案件節點 -->
+                  <div class="space-y-3 border-t border-slate-100 pt-6 font-sans">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider font-semibold">案件歷程節點</h3>
+                    <div class="flow-root">
+                      <ul class="-mb-8">
+                        <template x-for="(hist, histIdx) in detailPetition.history" :key="histIdx">
+                            <li>
+                              <div class="relative pb-8 font-normal">
+                                <span x-show="histIdx !== detailPetition.history.length - 1" class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-slate-200" aria-hidden="true"></span>
+                                <div class="relative flex space-x-3">
+                                  <div>
+                                    <span class="h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white text-xs font-bold"
+                                          :class="{
+                                              'bg-amber-100 text-amber-800': hist.status === '待處理',
+                                              'bg-blue-100 text-blue-800': hist.status === '審核中',
+                                              'bg-emerald-100 text-emerald-800': hist.status === '已解決',
+                                              'bg-slate-200 text-slate-800': hist.status === '不予受理'
+                                          }"
+                                          x-text="histIdx + 1"></span>
+                                  </div>
+                                  <div class="flex-grow pt-1.5 flex justify-between space-x-4">
+                                    <div><p class="text-xs font-bold text-slate-800" x-text="hist.note"></p></div>
+                                    <div class="text-right text-xs whitespace-nowrap text-slate-400 font-medium">
+                                      <span x-text="`狀態: ${hist.status}`"></span>
+                                      <span class="mx-1.5">|</span>
+                                      <time x-text="hist.date"></time>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </li>
+                        </template>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- 管理端操作 -->
+                  <div x-show="role === 'admin' && adminUser" class="border-t-2 border-dashed border-slate-200 pt-6 space-y-4">
+                      
+                      <!-- 具有管轄權 -->
+                      <div x-show="canManagePetition(adminUser, detailPetition)">
+                          <button x-show="!isAdminResponding"
+                                  @click="openResponseEditor()"
+                                  class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center space-x-2 animate-pulse font-sans">
+                            <span>✍️ 撰寫 / 修改官方答覆 & 更新進度 (權限：可辦理)</span>
+                          </button>
+
+                          <!-- 回覆表單 -->
+                          <form x-show="isAdminResponding" @submit.prevent="handleAdminSubmitResponse()" class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4 animate-fade-in font-sans font-semibold">
+                            <div class="flex items-center justify-between">
+                              <h4 class="text-sm font-bold text-slate-800">承辦單位審查與回覆面板</h4>
+                              <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold animate-pulse font-sans">權限授權成功</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">更新本案進度狀態</label>
+                                <select x-model="responseStatus" class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
+                                  <template x-for="stat in STATUSES" :key="stat">
+                                      <option :value="stat" x-text="stat"></option>
+                                  </template>
+                                </select>
+                              </div>
+                              <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">回覆發布單位</label>
+                                <input type="text" required x-model="responseDepartment" class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
+                              </div>
+                            </div>
+
+                            <div>
+                              <label class="block text-xs font-bold text-slate-500 mb-1 font-sans">官方正式答覆公文內文</label>
+                              <textarea required rows="4" placeholder="請詳述學校評估結果、後續辦理時程安排..." x-model="responseText"
+                                        class="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 leading-relaxed font-sans font-normal"></textarea>
+                            </div>
+
+                            <div class="flex items-center justify-end space-x-2">
+                              <button type="button" @click="isAdminResponding = false" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all font-sans">取消</button>
+                              <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-sm font-sans">發布答覆並提交</button>
+                            </div>
+                          </form>
+                      </div>
+
+                      <!-- 跨部唯讀警告 -->
+                      <div x-show="!canManagePetition(adminUser, detailPetition)" class="bg-rose-50 border border-rose-200 p-5 rounded-2xl flex items-start space-x-3 text-rose-800 font-sans">
+                        <div class="text-xl">⚠️</div>
+                        <div class="text-xs space-y-1 leading-normal font-normal">
+                          <p class="font-bold text-rose-900 font-sans">跨部門唯讀保護攔截 (Cross-Department Lock)</p>
+                          <p x-text="`您目前的登入帳號為 ${adminUser.name} (${adminUser.permissionLabel})，本案分類屬於 [${detailPetition.category}]。`"></p>
+                          <p class="opacity-85 font-medium" x-text="`因不屬於您所被授權的管轄權限範圍（${adminUser.allowedCategories.join(', ')}），您無法回覆此案或變更其狀態。如需變更，請協調最高系統管理員或權責承辦部門處理。`"></p>
+                        </div>
+                      </div>
+
+                      <!-- 系統管理下架 (完全改用自訂確認彈窗) -->
+                      <div x-show="adminUser.roleType === 'super'" class="pt-4 border-t border-slate-150 flex items-center justify-between font-semibold font-sans">
+                        <div class="text-left text-xs">
+                          <p class="font-bold text-rose-600">🛡️ 最高管理安全紅線</p>
+                          <p class="text-slate-400 font-normal">當發生惡意中傷、個資外洩或不當言論時，最高管理員可對此陳情案強制執行徹底抹除。</p>
+                        </div>
+                        <button type="button" @click="triggerCustomConfirm('刪除提案安全確認', `確定要從系統中永久抹除、下架陳情案號：[${detailPetition.id}] 嗎？此破壞性安全操作執行後將無法復原！`, () => handleDeletePetition(detailPetition.id))" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm shrink-0 font-sans">
+                          🗑️ 強制下架提案
+                        </button>
+                      </div>
+
+                  </div>
+
+                </div>
+
+                <!-- 彈窗底部 -->
+                <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-center justify-between rounded-b-3xl">
+                  <span class="text-xs text-slate-400 font-medium">本案聯署名冊已妥善加密儲存</span>
+                  
+                  <button x-show="role === 'student' && studentUser && detailPetition.status !== '已解決' && detailPetition.status !== '不予受理'"
+                          @click="handleCoSign(detailPetition.id)"
+                          :disabled="detailPetition.coSigners.includes(studentUser.id)"
+                          class="px-4 py-1.5 text-xs font-bold rounded-lg transition-all"
+                          :class="detailPetition.coSigners.includes(studentUser.id) ? 'bg-slate-200 text-slate-500 cursor-not-allowed font-semibold' : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                          x-text="detailPetition.coSigners.includes(studentUser.id) ? '✓ 已支持聯署' : '✍ 加入聯署'"></button>
+
+                  <button @click="detailPetition = null; isAdminResponding = false" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-all font-sans">關閉視窗</button>
+                </div>
+
+              </div>
+            </div>
+        </template>
+
+        <!-- ========================================== -->
+        <!-- ===== 4. 統一高質感安全確認二次彈窗 ===== -->
+        <!-- ========================================== -->
+        <template x-if="confirmModal.show">
+            <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-55 font-medium">
+              <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-100 transform transition-all animate-scale-up font-sans">
+                <div class="flex items-center space-x-3 text-rose-600 mb-4 font-sans">
+                  <div class="text-2xl animate-pulse">⚠️</div>
+                  <h3 class="text-lg font-bold font-sans" x-text="confirmModal.title"></h3>
+                </div>
+                
+                <p class="text-slate-600 text-sm leading-relaxed mb-6 font-normal" x-text="confirmModal.message"></p>
+
+                <div class="flex items-center justify-end space-x-3">
+                  <button type="button" @click="confirmModal.show = false" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all font-sans">取消返回</button>
+                  <button type="button" @click="executeCustomConfirm()" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm font-sans">確認並執行</button>
+                </div>
+              </div>
+            </div>
+        </template>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ========== AlpineJS 狀態與業務邏輯 ========== -->
+    <!-- ========================================== -->
+    <script>
+        function systemAppState() {
+            return {
+                // --- 登入與基礎系統狀態 ---
+                isLoggedIn: false,
+                role: 'student',
+                studentUser: null,
+                adminUser: null,
+                loginId: '',
+                loginPassword: '',
+                loginTab: 'student',
+
+                // --- 忘記密碼狀態 ---
+                isResettingPassword: false,
+                resetStep: 1,
+                resetId: '',
+                resetEmail: '',
+                resetCode: '',
+                resetNewPassword: '',
+
+                // --- 統一二次自訂安全確認模態框 ---
+                confirmModal: {
+                    show: false,
+                    title: '',
+                    message: '',
+                    onConfirm: null
+                },
+
+                // --- 消息公告板 ---
+                announcements: INITIAL_ANNOUNCEMENTS,
+                expandedAnnId: null,
+                newAnnTitle: '',
+                newAnnContent: '',
+                newAnnIsPinned: false,
+
+                // --- 系統安全稽核日誌 ---
+                auditLogs: [
+                    { id: "LOG-006", timestamp: "2026-05-30 15:05", user: "張最高 (A99001)", action: "權限稽核", details: "系統升級：全面優化前台與管理端 [空白狀態 UI]，並加入發言內容 Trim Blank 過濾防護防呆" },
+                    { id: "LOG-005", timestamp: "2026-05-30 14:50", user: "張最高 (A99001)", action: "公告管理", details: "系統核心：完成公告發布單位與管理員角色權限之深度同步配置綁定" },
+                    { id: "LOG-004", timestamp: "2026-05-30 14:15", user: "張最高 (A99001)", action: "公告管理", details: "發布重要校園公告：[114學年度第二學期期末考期間圖書館延長開放...]" },
+                    { id: "LOG-003", timestamp: "2026-05-30 11:24", user: "張最高 (A99001)", action: "權限稽核", details: "系統進行例行性權限配置查核：通過" },
+                    { id: "LOG-002", timestamp: "2026-05-29 09:12", user: "王總務 (A99002)", action: "變更狀態", details: "將陳情案 PET-2026-001 狀態更新為 [已解決] 並發布官方答覆" },
+                    { id: "LOG-001", timestamp: "2026-05-28 14:30", user: "系統核心", action: "系統初始化", details: "學生單一登入 (SSO) 陳情與意見反映稽核系統順利建置上線" }
+                ],
+
+                // --- 案件資料 ---
+                petitions: INITIAL_PETITIONS,
+                currentTab: 'all',
+                searchQuery: '',
+                selectedCategory: '全部',
+                selectedStatus: '全部',
+                detailPetition: null,
+
+                // --- 提案表單 ---
+                newTitle: '',
+                newCategory: CATEGORIES[0],
+                newContent: '',
+                newIsAnonymous: false,
+                newContact: '',
+
+                // --- 回覆表單 ---
+                isAdminResponding: false,
+                responseStatus: '審核中',
+                responseText: '',
+                responseDepartment: '總務處',
+
+                // --- 基礎靜態常量 ---
+                CATEGORIES: CATEGORIES,
+                STATUSES: STATUSES,
+                toast: null,
+
+                initSystem() {},
+
+                // 新增：重置所有篩選
+                resetFilters() {
+                    this.searchQuery = '';
+                    this.selectedCategory = '全部';
+                    this.selectedStatus = '全部';
+                    this.showToast('已重置所有篩選器。', 'success');
+                },
+
+                // --- 自訂確認彈窗觸發器 ---
+                triggerCustomConfirm(title, message, callback) {
+                    this.confirmModal.title = title;
+                    this.confirmModal.message = message;
+                    this.confirmModal.onConfirm = callback;
+                    this.confirmModal.show = true;
+                },
+
+                executeCustomConfirm() {
+                    if (this.confirmModal.onConfirm) {
+                        this.confirmModal.onConfirm();
+                    }
+                    this.confirmModal.show = false;
+                },
+
+                // --- 顯示 Toast 核心函數 ---
+                showToast(message, type = 'success') {
+                    this.toast = { message, type };
+                    setTimeout(() => {
+                        this.toast = null;
+                    }, 4000);
+                },
+
+                // --- 智慧自動登入偵測 ---
+                handleIdInputChange(val) {
+                    this.loginId = val;
+                    const upperId = val.trim().toUpperCase();
+
+                    // A. 特定學生自動登入
+                    if (upperId === 'S1120401') {
+                        const mockStudent = {
+                            id: 'S1120401',
+                            name: "陳小明",
+                            department: "資訊工程學系三年級",
+                            email: "s1120401@university.edu.tw"
+                        };
+                        this.studentUser = mockStudent;
+                        this.newContact = mockStudent.email;
+                        this.role = 'student';
+                        this.isLoggedIn = true;
+                        this.currentTab = 'all';
+                        this.loginId = '';
+                        this.loginPassword = '';
+                        this.showToast(`✨ 特定學生帳戶 SSO 免密自動登入：歡迎，${mockStudent.name}同學。`, 'success');
+                    }
+                    // B. 特定最高管理員自動登入
+                    else if (upperId === 'A99001') {
+                        const adminProfile = ADMIN_ACCOUNTS['A99001'];
+                        this.adminUser = adminProfile;
+                        this.role = 'admin';
+                        this.isLoggedIn = true;
+                        this.currentTab = 'list';
+                        this.addAuditLog(`${adminProfile.name} (${adminProfile.id})`, "自動登入", "最高管理員帳戶 Single Sign-On 免密碼安全認證通過");
+                        this.loginId = '';
+                        this.loginPassword = '';
+                        this.showToast(`✨ 特定最高管理員自動登入！權限級別：${adminProfile.permissionLabel}`, 'success');
+                    }
+                    // C. 特定總務管理員自動登入
+                    else if (upperId === 'A99002') {
+                        const adminProfile = ADMIN_ACCOUNTS['A99002'];
+                        this.adminUser = adminProfile;
+                        this.role = 'admin';
+                        this.isLoggedIn = true;
+                        this.currentTab = 'list';
+                        this.addAuditLog(`${adminProfile.name} (${adminProfile.id})`, "自動登入", "總務處事務組承辦人 Single Sign-On 免密碼安全認證通過");
+                        this.loginId = '';
+                        this.loginPassword = '';
+                        this.showToast(`✨ 特定總務處管理員自動登入！權限級別：${adminProfile.permissionLabel}`, 'success');
+                    }
+                    // D. 特定教務管理員自動登入
+                    else if (upperId === 'A99003') {
+                        const adminProfile = ADMIN_ACCOUNTS['A99003'];
+                        this.adminUser = adminProfile;
+                        this.role = 'admin';
+                        this.isLoggedIn = true;
+                        this.currentTab = 'list';
+                        this.addAuditLog(`${adminProfile.name} (${adminProfile.id})`, "自動登入", "教務處課務組承辦人 Single Sign-On 免密碼安全認證通過");
+                        this.loginId = '';
+                        this.loginPassword = '';
+                        this.showToast(`✨ 特定教務處管理員自動登入！權限級別：${adminProfile.permissionLabel}`, 'success');
+                    }
+                },
+
+                // 手動常規登入
+                handleLoginSubmit() {
+                    const formattedId = this.loginId.trim().toUpperCase();
+
+                    if (!formattedId) {
+                        this.showToast(this.loginTab === 'student' ? "請輸入學號！" : "請輸入職工編號！", "error");
+                        return;
+                      }
+                    if (!this.loginPassword) {
+                        this.showToast("請輸入密碼！", "error");
+                        return;
+                    }
+
+                    if (this.loginTab === 'student') {
+                        const mockStudent = {
+                            id: formattedId,
+                            name: `同學_${formattedId.slice(-3)}`,
+                            department: "一般科系學員",
+                            email: `${formattedId.toLowerCase()}@university.edu.tw`
+                        };
+                        this.studentUser = mockStudent;
+                        this.newContact = mockStudent.email;
+                        this.role = 'student';
+                        this.isLoggedIn = true;
+                        this.currentTab = 'all';
+                        this.showToast(`學生單一入口驗證成功！歡迎回到系統，${mockStudent.name}。`, "success");
+                    } else {
+                        const customAdmin = {
+                            id: formattedId,
+                            name: `承辦人_${formattedId.slice(-3)}`,
+                            roleType: "dept",
+                            department: "學務處課外活動組",
+                            permissionLabel: "學務處承辦人",
+                            allowedCategories: ["課外活動", "校園安全"]
+                        };
+                        this.adminUser = customAdmin;
+                        this.role = 'admin';
+                        this.isLoggedIn = true;
+                        this.currentTab = 'list';
+                        this.addAuditLog(`${customAdmin.name} (${customAdmin.id})`, "登入系統", "行政承辦人員經單一門戶安全核驗登入");
+                        this.showToast("行政管理端驗證成功，已進入審查中心。", "success");
+                    }
+
+                    this.loginId = '';
+                    this.loginPassword = '';
+                },
+
+                // 安全登出
+                handleLogout() {
+                    if (this.role === 'admin' && this.adminUser) {
+                        this.addAuditLog(`${this.adminUser.name} (${this.adminUser.id})`, "登出系統", "管理人員手動點選安全登出成功");
+                    }
+                    this.isLoggedIn = false;
+                    this.studentUser = null;
+                    this.adminUser = null;
+                    this.detailPetition = null;
+                    this.isAdminResponding = false;
+                    this.showToast("您已安全登出學生單一登入入口。", "success");
+                },
+
+                // --- 忘記密碼邏輯 ---
+                handleSendResetCode() {
+                    if (!this.resetId.trim() || !this.resetEmail.trim()) {
+                        this.showToast("請輸入完整的帳號與電子信箱！", "error");
+                        return;
+                    }
+                    this.showToast("驗證碼已成功發送至您的預留信箱！（測試預設驗證碼為：1234）", "success");
+                    this.resetStep = 2;
+                },
+
+                handleVerifyAndReset() {
+                    if (this.resetCode !== '1234') {
+                        this.showToast("驗證碼錯誤！請輸入 1234 進行模擬測試。", "error");
+                        return;
+                    }
+                    if (!this.resetNewPassword.trim()) {
+                        this.showToast("請輸入設定的新密碼！", "error");
+                        return;
+                    }
+
+                    this.showToast("密碼重設成功！系統已為您預填新帳密，請點擊登入驗證。", "success");
+                    this.loginId = this.resetId.toUpperCase();
+                    this.loginPassword = this.resetNewPassword;
+                    
+                    this.isResettingPassword = false;
+                    this.resetStep = 1;
+                    this.resetId = '';
+                    this.resetEmail = '';
+                    this.resetCode = '';
+                    this.resetNewPassword = '';
+                },
+
+                // --- 依置頂排序公告 ---
+                sortedAnnouncements() {
+                    return [...this.announcements].sort((a, b) => {
+                      if (a.isPinned && !b.isPinned) return -1;
+                      if (!a.isPinned && b.isPinned) return 1;
+                      return b.date.localeCompare(a.date);
+                    });
+                },
+
+                // --- 處室公告管理與發布 (以管理權限為發布單位，加入空白過濾防呆) ---
+                handleCreateAnnouncement() {
+                    if (!this.adminUser) return;
+                    
+                    // 升級：空白校驗防呆
+                    if (!this.newAnnTitle.trim() || !this.newAnnContent.trim()) {
+                      this.showToast("公告標題與詳細內文不得為空或僅含有空白字元！", "error");
+                      return;
+                    }
+
+                    const newId = `ANN-${Date.now().toString().slice(-3)}`;
+                    const newDoc = {
+                      id: newId,
+                      title: this.newAnnTitle,
+                      date: new Date().toISOString().split('T')[0],
+                      department: this.adminUser.permissionLabel, 
+                      content: this.newAnnContent,
+                      isPinned: this.newAnnIsPinned
+                    };
+
+                    this.announcements = [newDoc, ...this.announcements];
+                    this.addAuditLog(
+                      `${this.adminUser.name} (${this.adminUser.id})`, 
+                      "發布公告", 
+                      `發布全新消息 [${newId}] - 標題: [${this.newAnnTitle}] (置頂: ${this.newAnnIsPinned ? '是' : '否'}，發布身份：${this.adminUser.permissionLabel})`
+                    );
+                    this.showToast(`最新公告「${this.newAnnTitle.slice(0, 10)}...」已由「${this.adminUser.permissionLabel}」正式發布！`, "success");
+                    
+                    this.newAnnTitle = '';
+                    this.newAnnContent = '';
+                    this.newAnnIsPinned = false;
+                },
+
+                handleDeleteAnnouncement(id) {
+                    if (!this.adminUser) return;
+                    const annTarget = this.announcements.find(a => a.id === id);
+                    if (!annTarget) return;
+
+                    // 權限安全判定 (使用權限級別對比)
+                    if (this.adminUser.roleType !== 'super' && this.adminUser.permissionLabel !== annTarget.department) {
+                      this.showToast("安全限制：您無權下架其他權限發布的公告！", "error");
+                      return;
+                    }
+
+                    this.announcements = this.announcements.filter(a => a.id !== id);
+                    this.addAuditLog(
+                      `${this.adminUser.name} (${this.adminUser.id})`, 
+                      "刪除公告", 
+                      `下架撤下公告 [${id}] - 標題: [${annTarget.title}]`
+                    );
+                    this.showToast("公告撤下並銷毀完畢。", "success");
+                },
+
+                // --- 篩選案件清單核心計算 ---
+                getFilteredPetitions() {
+                    return this.petitions.filter(item => {
+                      const matchesSearch = item.title.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                            item.content.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                                            item.id.toLowerCase().includes(this.searchQuery.toLowerCase());
+                      const matchesCategory = this.selectedCategory === '全部' || item.category === this.selectedCategory;
+                      const matchesStatus = this.selectedStatus === '全部' || item.status === this.selectedStatus;
+                      
+                      let matchesTab = true;
+                      if (this.role === 'student' && this.currentTab === 'my') {
+                        matchesTab = (this.studentUser && (item.studentId === this.studentUser.id || item.author === this.studentUser.name));
+                      }
+
+                      return matchesSearch && matchesCategory && matchesStatus && matchesTab;
+                    });
+                },
+
+                openPetitionDetail(item) {
+                    item.views += 1;
+                    this.detailPetition = item;
+                },
+
+                // --- 學生陳情與聯署 (加入空白過濾防呆) ---
+                handleCoSign(petitionId) {
+                    if (!this.studentUser) return;
+                    this.petitions = this.petitions.map(p => {
+                      if (p.id === petitionId) {
+                        if (p.coSigners.includes(this.studentUser.id)) {
+                          this.showToast("您已經參與過此陳情提案的聯署！", "warning");
+                          return p;
+                        }
+                        this.showToast("聯署成功！感謝您對校園事務的參與。", "success");
+                        const updated = {
+                          ...p,
+                          coSigners: [...p.coSigners, this.studentUser.id]
+                        };
+                        if (this.detailPetition && this.detailPetition.id === petitionId) {
+                          this.detailPetition = updated;
+                        }
+                        return updated;
+                      }
+                      return p;
+                    });
+                },
+
+                handleSubmitPetition() {
+                    if (!this.studentUser) return;
+                    
+                    // 升級：空白校驗防呆
+                    if (!this.newTitle.trim() || !this.newContent.trim()) {
+                      this.showToast("陳情提案之標題與詳細內容不得為空或僅含有空白字元！", "error");
+                      return;
+                    }
+
+                    const newId = `PET-MINE-${Date.now().toString().slice(-4)}`;
+                    const newDoc = {
+                      id: newId,
+                      title: this.newTitle,
+                      category: this.newCategory,
+                      author: this.newIsAnonymous ? "匿名同學" : this.studentUser.name,
+                      studentId: this.studentUser.id,
+                      isAnonymous: this.newIsAnonymous,
+                      date: new Date().toISOString().split('T')[0],
+                      content: this.newContent,
+                      status: "待處理",
+                      coSigners: [this.studentUser.id],
+                      views: 1,
+                      officialResponse: null,
+                      history: [
+                        { status: "待處理", date: new Date().toISOString().split('T')[0], note: `學生 (${this.studentUser.id}) 提交陳情` }
+                      ]
+                    };
+
+                    this.petitions = [newDoc, ...this.petitions];
+                    this.showToast("陳情提案已成功遞交！", "success");
+                    
+                    this.newTitle = '';
+                    this.newContent = '';
+                    this.newIsAnonymous = false;
+                    this.currentTab = 'my';
+                },
+
+                // --- 審查回覆與狀態更新 (加入空白過濾防呆) ---
+                openResponseEditor() {
+                    this.responseStatus = this.detailPetition.status;
+                    this.responseText = this.detailPetition.officialResponse?.content || '';
+                    this.responseDepartment = this.detailPetition.officialResponse?.respondent || this.adminUser.department;
+                    this.isAdminResponding = true;
+                },
+
+                handleAdminSubmitResponse() {
+                    if (!this.adminUser) return;
+                    
+                    // 升級：空白校驗防呆
+                    if (!this.responseText.trim() || !this.responseDepartment.trim()) {
+                      this.showToast("答覆內文與發布主管處室名稱不得為空或僅包含空白！", "error");
+                      return;
+                    }
+
+                    if (!this.canManagePetition(this.adminUser, this.detailPetition)) {
+                      this.showToast("安全防線攔截：您不具備該陳情案所屬部門的編輯權限！", "error");
+                      return;
+                    }
+
+                    this.petitions = this.petitions.map(p => {
+                      if (p.id === this.detailPetition.id) {
+                        const today = new Date().toISOString().split('T')[0];
+                        const updatedHistory = [...p.history];
+                        
+                        if (p.status !== this.responseStatus) {
+                          updatedHistory.push({
+                            status: this.responseStatus,
+                            date: today,
+                            note: `管理員 [${this.adminUser.name}] 更新狀態並發布官方答覆（答覆單位：${this.responseDepartment}）`
+                          });
+                        } else {
+                          updatedHistory.push({
+                            status: p.status,
+                            date: today,
+                            note: `管理員 [${this.adminUser.name}] 補充官方答覆（答覆單位：${this.responseDepartment}）`
+                          });
+                        }
+
+                        const updated = {
+                          ...p,
+                          status: this.responseStatus,
+                          officialResponse: {
+                            respondent: this.responseDepartment,
+                            date: today,
+                            content: this.responseText
+                          },
+                          history: updatedHistory
+                        };
+
+                        this.detailPetition = updated;
+                        
+                        this.addAuditLog(
+                          `${this.adminUser.name} (${this.adminUser.id})`, 
+                          "審查與答覆", 
+                          `將陳情案 [${p.id}] 狀態更新為 [${this.responseStatus}]，答覆單位填寫為：${this.responseDepartment}`
+                        );
+
+                        this.showToast("已成功發布官方答覆並更新陳情案進度！", "success");
+                        return updated;
+                      }
+                      return p;
+                    });
+
+                    this.isAdminResponding = false;
+                    this.responseText = '';
+                },
+
+                // --- 刪除與下架案件 (Super Admin Only) ---
+                handleDeletePetition(id) {
+                    if (!this.adminUser || this.adminUser.roleType !== 'super') {
+                      this.showToast("權限不足！僅有最高系統管理員能刪除提案。", "error");
+                      return;
+                    }
+                    
+                    this.petitions = this.petitions.filter(p => p.id !== id);
+                    this.addAuditLog(
+                      `${this.adminUser.name} (${this.adminUser.id})`, 
+                      "刪除提案", 
+                      `強制下架並永久抹除陳情案號：[${id}]`
+                    );
+                    this.showToast(`陳情案 ${id} 已成功強制刪除並從系統完全抹除。`, "success");
+                    this.detailPetition = null;
+                    this.deleteConfirmTargetId = null;
+                },
+
+                // --- Excel UTF-8 BOM CSV 匯出控制 ---
+                handleExportPetitions(targetData, isFiltered = false) {
+                    const headers = [
+                      "案件編號", "陳情類別", "提案主題", "提案人", "學號", "提出日期", 
+                      "目前進度", "聯署人數", "瀏覽人次", "陳情內文細節", 
+                      "承辦回覆單位", "答覆日期", "官方答覆內文"
+                    ];
+
+                    const dataRows = targetData.map(p => [
+                      p.id,
+                      p.category,
+                      p.title,
+                      p.author,
+                      p.studentId || "無資訊",
+                      p.date,
+                      p.status,
+                      p.coSigners.length,
+                      p.views,
+                      p.content.replace(/\r?\n/g, " "), 
+                      p.officialResponse ? p.officialResponse.respondent : "未回覆",
+                      p.officialResponse ? p.officialResponse.date : "無",
+                      p.officialResponse ? p.officialResponse.content.replace(/\r?\n/g, " ") : "無"
+                    ]);
+
+                    const label = isFiltered ? "篩選陳情報表" : "全校陳情彙整總表";
+                    this.exportToExcel(headers, dataRows, label);
+
+                    if (this.isLoggedIn && this.role === 'admin' && this.adminUser) {
+                      this.addAuditLog(
+                        `${this.adminUser.name} (${this.adminUser.id})`, 
+                        "資料匯出", 
+                        `將目前平台中的 ${targetData.length} 筆陳情案資料，匯出並儲存為本機 Excel 檔案`
+                      );
+                    }
+                    this.showToast(`Excel 報表匯出成功！`, "success");
+                },
+
+                handleExportAuditLogs() {
+                    if (!this.adminUser || this.adminUser.roleType !== 'super') {
+                      this.showToast("權限不足！僅有系統最高管理員有權匯出核心安全日誌。", "error");
+                      return;
+                    }
+
+                    const headers = ["日誌編號", "紀錄時間", "執行操作人員", "操作動作分類", "操作詳細描述"];
+                    const dataRows = this.auditLogs.map(log => [
+                      log.id,
+                      log.timestamp,
+                      log.user,
+                      log.action,
+                      log.details
+                    ]);
+
+                    this.exportToExcel(headers, dataRows, "系統操作安全稽核日誌總表");
+                    this.showToast(`安全稽核日誌已成功匯出！`, "success");
+                },
+
+                handleExportAnnouncements() {
+                    const headers = ["公告識別碼", "發布日期", "發布單位", "公告標題", "置頂狀態", "公告詳細內文"];
+                    const dataRows = this.announcements.map(ann => [
+                      ann.id,
+                      ann.date,
+                      ann.department,
+                      ann.title,
+                      ann.isPinned ? "是" : "否",
+                      ann.content.replace(/\r?\n/g, " ")
+                    ]);
+                    this.exportToExcel(headers, dataRows, "校園系統公告消息總清單");
+                    
+                    if (this.isLoggedIn && this.role === 'admin' && this.adminUser) {
+                      this.addAuditLog(
+                        `${this.adminUser.name} (${this.adminUser.id})`, 
+                        "資料匯出", 
+                        `匯出全校目前已發布之 ${this.announcements.length} 筆校園公告清單 Excel`
+                      );
+                    }
+                    this.showToast(`校園公告數據已成功導出 Excel！`, "success");
+                },
+
+                exportToExcel(headers, dataRows, filename) {
+                    let csvContent = "\uFEFF"; 
+                    csvContent += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\r\n";
+                    
+                    dataRows.forEach(row => {
+                      const escapedRow = row.map(val => {
+                        let str = val === null || val === undefined ? "" : String(val);
+                        str = str.replace(/"/g, '""');
+                        return `"${str}"`;
+                      }).join(",");
+                      csvContent += escapedRow + "\r\n";
+                    });
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            };
+        }
+
+        // --- 基礎靜態常量與初始資料定義 ---
+        const CATEGORIES = ["學術教務", "設施服務", "餐飲衛生", "學生福利", "課外活動", "校園安全"];
+        const STATUSES = ["待處理", "審核中", "已解決", "不予受理"];
+
+        const ADMIN_ACCOUNTS = {
+          "A99001": {
+            id: "A99001",
+            name: "張最高",
+            roleType: "super", 
+            department: "秘書室第一組",
+            permissionLabel: "系統最高管理員",
+            allowedCategories: CATEGORIES
+          },
+          "A99002": {
+            id: "A99002",
+            name: "王總務",
+            roleType: "dept",
+            department: "總務處事務組",
+            permissionLabel: "總務處承辦人",
+            allowedCategories: ["設施服務", "餐飲衛生"]
+          },
+          "A99003": {
+            id: "A99003",
+            name: "李教務",
+            roleType: "dept",
+            department: "教務處課務組",
+            permissionLabel: "教務處承辦人",
+            allowedCategories: ["學術教務", "學生福利"]
+          }
+        };
+
+        const INITIAL_PETITIONS = [
+          {
+            id: "PET-2026-001",
+            title: "建請學校於男宿、女宿公共區域增設「24小時自助販賣機」",
+            category: "設施服務",
+            author: "張*豪",
+            studentId: "S1102941",
+            isAnonymous: false,
+            date: "2026-05-15",
+            content: "目前宿舍區深夜後缺乏食物補給管道，便利商店距離宿舍區步行需15分鐘。建議於男女宿舍一樓大廳或交誼廳增設提供泡麵、飲料與微波食品的24小時自動販賣機，以利夜間讀書或趕報告的同學補充體力。",
+            status: "已解決",
+            coSigners: ["student_1", "student_2", "student_3", "student_4", "student_5", "student_6", "student_7", "student_8", "student_9", "student_10", "student_11", "student_12"],
+            views: 142,
+            officialResponse: {
+              respondent: "總務處保管組",
+              date: "2026-05-20",
+              content: "感謝同學提案。經與自動販賣機廠商評估，男宿A棟與女宿B棟一樓交誼廳確有空間且電力系統足以負荷。本處已於5月18日與廠商完成簽約，預計將於6月初完成設備進駐與電力測試，屆時將提供各式冷熱飲、泡麵及微波輕食。感謝您的建言，讓校園生活更便利。"
+            },
+            history: [
+              { status: "待處理", date: "2026-05-15", note: "學生提交陳情" },
+              { status: "審核中", date: "2026-05-17", note: "總務處受理並進行現場空間與電力評估" },
+              { status: "已解決", date: "2026-05-20", note: "已與廠商簽約，預計6月初裝設完畢" }
+            ]
+          },
+          {
+            id: "PET-2026-002",
+            title: "資訊大樓階梯教室 WiFi 訊號極度不穩，嚴重影響課堂實作",
+            category: "學術教務",
+            author: "匿名同學",
+            studentId: "S1110594",
+            isAnonymous: true,
+            date: "2026-05-28",
+            content: "資訊大樓101、102階梯教室在進行大班授課（超過百人）時，學校的無線網路（i-Academic）經常性斷線，或是完全無法獲取IP位址。許多課程需要即時寫程式並上傳至伺服器評分，網路異常嚴重阻礙學習進度，希望圖書資訊處能撥款升級該區域的AP路由器。",
+            status: "審核中",
+            coSigners: ["student_1", "student_3", "student_5", "student_8", "student_15", "student_18", "student_20", "student_21", "student_22", "student_23", "student_24", "student_25", "student_26", "student_27", "student_28", "student_29", "student_30", "student_31", "student_32", "student_33", "student_34", "student_35", "student_36"],
+            views: 89,
+            officialResponse: null,
+            history: [
+              { status: "待處理", date: "2026-05-28", note: "學生提交陳情" },
+              { status: "審核中", date: "2026-05-29", note: "圖書資訊處網路架構組已派員於課堂間進行訊號與連線數量量測" }
+            ]
+          },
+          {
+            id: "PET-2026-003",
+            title: "學生餐廳（第二學餐）某自助餐攤位衛生疑慮反映",
+            category: "餐飲衛生",
+            author: "林*婷",
+            studentId: "S1120394",
+            isAnonymous: false,
+            date: "2026-05-29",
+            content: "昨日（5月28日）中午於第二學餐某自助餐夾取菜餚時，發現高麗菜內夾雜疑似昆蟲肢體，且打菜人員未配戴口罩 with 衛生帽。此並非單一事件，近期已有數位同學反映該攤位餐具未確實清潔。建請衛保組加強稽查，確保學生膳食安全。",
+            status: "待處理",
+            coSigners: ["student_1", "student_9", "student_15", "student_55", "student_56"],
+            views: 45,
+            officialResponse: null,
+            history: [
+              { status: "待處理", date: "2026-05-29", note: "學生提交陳情" }
+            ]
+          },
+          {
+            id: "PET-2026-004",
+            title: "期末考期間，圖書館 24 小時自習室應實施「全面禁止佔位」之規範",
+            category: "學生福利",
+            author: "陳*宇",
+            studentId: "S1104822",
+            isAnonymous: false,
+            date: "2026-05-22",
+            content: "每逢期中、期末考週，圖書館B1的24小時自習室便會出現嚴重「佔位不坐」的情形。許多同學用幾本書、水壺就佔用位置長達數小時甚至整天。建請圖書館訂定明確規範：人離開超過30分鐘，館員或自習室巡邏人員有權將其物品移置失物招領處，將座位釋放給真正需要的同學。",
+            status: "已解決",
+            coSigners: ["student_2", "student_4", "student_6", "student_12", "student_15", "student_22", "student_30", "student_40", "student_41", "student_42", "student_43", "student_44", "student_45", "student_46", "student_47"],
+            views: 210,
+            officialResponse: {
+              respondent: "圖書館讀者服務組",
+              date: "2026-05-25",
+              content: "同學您好。圖書館已於5月24日召開內部會議，決議自本學期期末考前一週（6月8日）起，自習室將實施「定時巡查與佔位清除作業」。巡查人員將於每兩小時巡視一次，若發現座位留有物品但無人使用，將貼上時間標籤，逾45分鐘未歸者，物品將由館員裝袋移至服務台保管，並釋出座位。感謝您的寶貴建議，共同維護優質閱讀環境。"
+            },
+            history: [
+              { status: "待處理", date: "2026-05-22", note: "學生提交陳情" },
+              { status: "審核中", date: "2026-05-23", note: "圖書館召集讀者服務組評估可行性與人力調度" },
+              { status: "已解決", date: "2026-05-25", note: "制定並公告新版佔位清理規範，將於期末考週前實施" }
+            ]
+          },
+          {
+            id: "PET-2026-005",
+            title: "建議調降校園汽機車停車費，並優化機車棚遮雨設施",
+            category: "設施服務",
+            author: "匿名同學",
+            studentId: "S1128833",
+            isAnonymous: true,
+            date: "2026-05-25",
+            content: "本校機車停車費每學期收費高達800元，然而大部分戶外機車棚皆無遮雨棚，每逢雨天座墊全濕、車殼老化加劇。且校園周邊其他大專院校每學期僅收費300-500元。建議校方調降費用至500元，或者承諾撥款將所有戶外機車棚加裝遮雨設施。",
+            status: "不予受理",
+            coSigners: ["student_12", "student_13"],
+            views: 56,
+            officialResponse: {
+              respondent: "總務處事務組",
+              date: "2026-05-27",
+              content: "同學您好。本校停車收費標準乃經由「校園規劃與福利委員會」（含學生代表）共同討論並通過，所有收費皆專款專用於「校園道路維護、停車場鋪面重整、智慧車牌辨識系統維護及各車棚照明安全設備更新」。關於遮雨棚建置，因部分區域涉及都市計畫綠覆率限制與景觀保育，無法全面加蓋。未來三年內，總務處已規劃逐年分期編列預算，優先針對高使用率之「西側機車棚」增設太陽能光電遮雨棚，兼顧綠能與遮雨需求，故本案收費調降部分暫不予受理。"
+            },
+            history: [
+              { status: "待處理", date: "2026-05-25", note: "學生提交陳情" },
+              { status: "不予受理", date: "2026-05-27", note: "因收費標準已經法定委員會決議，且已有分期改善計畫，此提案結案存查" }
+            ]
+          }
+        ];
+
+        const INITIAL_ANNOUNCEMENTS = [
+          {
+            id: "ANN-001",
+            title: "📢 114學年度第二學期期末考期間「圖書館延長開放」及「自習室強行佔位清理」配合公告",
+            date: "2026-05-25",
+            department: "圖書館讀者服務組", 
+            content: "配合期末考週（6月15日至6月19日），圖書館自習室自6月8日起實施定時佔位清除。每兩小時將有館員巡查，凡離座超過45分鐘且留有個人物品者，將統一移置服務台，以保障同學公平使用席位之權利。",
+            isPinned: true
+          },
+          {
+            id: "ANN-002",
+            title: "📝 攸關學生生活權益！請同學多加利用「學生陳情系統」並踴躍發起聯署",
+            date: "2026-05-20",
+            department: "系統最高管理員", 
+            content: "本校陳情系統已更新為 Single Sign-On 學生單一登入服務，凡聯署人數達 15 人之提案，秘書室將在每週行政會議中列為優先督導承辦案件，歡迎各位同學積極針對教務、總務等事項提出寶貴建言。",
+            isPinned: true
+          },
+          {
+            id: "ANN-003",
+            title: "⚡ 西側機車棚「太陽能光電遮雨棚分期建置案」公開說明",
+            date: "2026-05-18",
+            department: "總務處承辦人", 
+            content: "針對同學反映校內機車棚遮雨空間不足一案，總務處已編列下半年度預算，預計於7月暑期開始施工，優先在西側高密度的西一棚建置綠能太陽能板遮雨罩。施工期間請注意安全動線引導。",
+            isPinned: false
+          }
+        ];
+    </script>
+</body>
+</html>
